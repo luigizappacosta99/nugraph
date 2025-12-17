@@ -48,5 +48,8 @@ class InputNorm(torch.nn.Module):
             self.norm["mean"] = P(mean, requires_grad=False)
             self.norm["var"] = P(var, requires_grad=False)
 
+        #print("self.norm shape")
+        #print(x.shape,self.norm["mean"].shape)
+
         # return normalized tensor
         return (x - self.norm["mean"][None, :]) / (self.norm["var"][None, :] + 1e-5).sqrt()

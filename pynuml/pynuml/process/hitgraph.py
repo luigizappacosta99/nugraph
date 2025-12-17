@@ -69,15 +69,19 @@ class HitGraphProducer(ProcessorBase):
 
         if self.event_labeller or self.label_vertex:
             event = evt['event_table'].squeeze()
+            #print("event squeeze")
 
         # support different generations of event HDF5 format
         hits = evt['hit_table']
         if "local_plane" in hits.columns:
             plane_key, proj_key, drift_key = "local_plane", "local_wire", "local_time"
+            #print("local_plane: true")
         else:
             plane_key, proj_key, drift_key = "view", "proj", "drift"
+            #print("local_plane: false")
 
         spacepoints = evt['spacepoint_table'].reset_index(drop=True)
+        #print("spacepoints")
 
         # discard any events with pathologically large hit integrals
         # this is a hotfix that should be removed once the dataset is fixed
@@ -87,8 +91,10 @@ class HitGraphProducer(ProcessorBase):
 
         # handle energy depositions
         if self.semantic_labeller:
+            #print("semantic_labeller")
             edeps = evt['edep_table']
             energy_col = 'energy' if 'energy' in edeps.columns else 'energy_fraction' # for backwards compatibility
+            #print("edeps")
 
             # get ID of max particle
             g4_id = edeps[[energy_col, 'g4_id', 'hit_id']]
@@ -96,6 +102,9 @@ class HitGraphProducer(ProcessorBase):
                                       ascending=False,
                                       kind='mergesort').drop_duplicates('hit_id')
             hits = g4_id.merge(hits, on='hit_id', how='right')
+            #print("get ID of max particle")
+            #print(g4_id)
+            #print(hits)
 
             # charge-weighted average of 3D position
             if self.label_position:
@@ -107,25 +116,36 @@ class HitGraphProducer(ProcessorBase):
                     edeps.loc[:, col] /= edeps.energy
                 edeps = edeps.drop("energy", axis="columns")
                 hits = edeps.merge(hits, on="hit_id", how="right")
+            #print("charge-weighted average of 3D position")
 
             hits['filter_label'] = ~hits[energy_col].isnull()
             hits = hits.drop(energy_col, axis='columns')
+            #print("filter_label")
 
         # reset spacepoint index
         spacepoints = spacepoints.reset_index(names='index_3d')
+        #print("spacepoints reset index")
 
         # skip events with fewer than lower_bnd simulated hits in any plane.
         # note that we can't just do a pandas groupby here, because that will
         # skip over any planes with zero hits
+        #print("len(self.planes)="+str(len(self.planes)))
         for i in range(len(self.planes)):
             planehits = hits[hits[plane_key]==i]
+            #print(len(hits))
+            #print("plane "+plane_key)
             nhits = planehits.filter_label.sum() if self.semantic_labeller else planehits.shape[0]
+            #print("nhits="+str(nhits))
             if nhits < self.lower_bound:
+                #print("plane "+plane_key+" empty")
                 return evt.name, None
+        #print("planes end")
+            
 
         # get labels for each particle
         if self.semantic_labeller:
             particles = self.semantic_labeller(evt['particle_table'])
+            print(particles)
             try:
                 hits = hits.merge(particles, on='g4_id', how='left')
             except:
@@ -134,29 +154,34 @@ class HitGraphProducer(ProcessorBase):
                 print('particle table:', particles)
                 print('skipping this event')
                 return evt.name, None
-            mask = (~hits.g4_id.isnull()) & (hits.semantic_label.isnull())
-            if mask.any():
-                print(f'found {mask.sum()} orphaned hits.')
-                return evt.name, None
-            del mask
+            #mask = (~hits.g4_id.isnull()) & (hits.semantic_label.isnull())
+            #if mask.any():
+            #    print(f'found {mask.sum()} orphaned hits.')
+            #    return evt.name, None
+            #del mask
+            #print("get labels for each particle")
 
+        #print(data)
         data = NuGraphData()
+        #print(data)
 
         # event metadata
         r, sr, e = evt.event_id
         data['metadata'].run = r
         data['metadata'].subrun = sr
         data['metadata'].event = e
+        #print("metadata")
 
         # spacepoint nodes
         if "position_x" in spacepoints.keys():
-            data["sp"].pos = torch.tensor(spacepoints[[f"position_{c}" for c in ("x", "y", "z")]].values).float()
+            data["sp"].pos = torch.tensor(spacepoints[[f"position_{c}" for c in ("x", "y", "z")]].values) #.astype(np.float64)
         else:
             data['sp'].num_nodes = spacepoints.shape[0]
 
         hits = hits.reset_index(names="index_2d")
 
         node_pos = [proj_key, drift_key]
+        #print("node pos")
 
         # node position
         data["hit"].plane = torch.tensor(hits[plane_key].values, dtype=torch.long)
@@ -165,6 +190,7 @@ class HitGraphProducer(ProcessorBase):
         # node features
         node_feats = self.node_feats + [plane_key, proj_key, drift_key]
         data["hit"].x = torch.tensor(hits[node_feats].values).float()
+        #print("nodes")
 
         # node true position
         if self.label_position:
@@ -172,6 +198,7 @@ class HitGraphProducer(ProcessorBase):
 
         # hit indices
         data["hit"].id = torch.tensor(hits['hit_id'].values).long()
+        #print("hit indices")
 
         # 2D graph edges
         data["hit", "delaunay", "hit"].edge_index = self.transform(data["hit"]).edge_index
@@ -182,6 +209,7 @@ class HitGraphProducer(ProcessorBase):
             tmp.pos = torch.tensor(view_hits[node_pos].values).float()
             edge_plane.append(tmp.index_2d[self.transform(tmp).edge_index])
         data["hit", "delaunay-planar", "hit"].edge_index = torch.cat(edge_plane, dim=1)
+        #print("2D graph edges")
 
         # 3D graph edges
         edge_nexus = []
@@ -194,6 +222,7 @@ class HitGraphProducer(ProcessorBase):
             edge = torch.tensor(edge) if edge.size else torch.empty((2,0))
             edge_nexus.append(edge.long())
         data["hit", "nexus", "sp"].edge_index = torch.cat(edge_nexus, dim=1)
+        #print("3D graph edges")
 
         # add edges to event node
         data["evt"].num_nodes = 1
@@ -224,15 +253,18 @@ class HitGraphProducer(ProcessorBase):
                 data["hit"].g4_id = torch.tensor(hits['g4_id'].fillna(-1).values).long()
                 data["hit"].parent_id = torch.tensor(hits['parent_id'].fillna(-1).values).long()
                 data["hit"].pdg = torch.tensor(hits['type'].fillna(-1).values).long()
-
+            #print("truth information")
+        
         # event label
         if self.event_labeller:
             # pylint: disable=possibly-used-before-assignment
             data['evt'].y = torch.tensor(self.event_labeller(event)).long().reshape([1])
+            #print("event label information")
 
         # 3D vertex truth
         if self.label_vertex:
             vtx_3d = [ [ event.nu_vtx_corr_x, event.nu_vtx_corr_y, event.nu_vtx_corr_z ] ]
             data['evt'].y_vtx = torch.tensor(vtx_3d).float()
 
+        #print("end to __call__")
         return evt.name, data

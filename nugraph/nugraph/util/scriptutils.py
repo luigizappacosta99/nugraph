@@ -54,6 +54,7 @@ def configure_device(device: int = None) -> tuple[str, str | list[int]]:
 
     # if no device passed, run on CPU
     if device is None:
+        print("cpu")
         return "cpu", "auto"
 
     # if a device was requested but there are none available, raise an error
@@ -62,4 +63,5 @@ def configure_device(device: int = None) -> tuple[str, str | list[int]]:
                              "available in the current environment."))
 
     # return GPU device as single element list
+    print("gpu")
     return "gpu", [device]

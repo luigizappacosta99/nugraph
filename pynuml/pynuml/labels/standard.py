@@ -76,7 +76,12 @@ class StandardLabels:
         def walk(part, particles, depth, sl, il):
             def s(part, particles):
                 sl, slc = -1, None
-                parent_type = 0 if part.parent_id == 0 else particles.type[part.parent_id]
+                parent_type_pre = 0 if part.parent_id == 0 else particles.type[part.parent_id]
+                
+                if(isinstance(parent_type_pre, pd.Series)):
+                    parent_type = parent_type_pre.iloc[1]
+                else:
+                    parent_type = parent_type_pre
 
                 def pion_labeler(part, parent_type):
                     sl = self.pion

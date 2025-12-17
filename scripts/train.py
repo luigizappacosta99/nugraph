@@ -45,9 +45,12 @@ def train(args):
     torch.manual_seed(1)
 
     # Load dataset
-    nudata = Data(args.data_path, batch_size=args.batch_size,
-                  model=Model, shuffle=args.shuffle,
-                  balance_frac=args.balance_frac, num_workers=args.num_workers)
+    #nudata = Data(args.data_path, batch_size=args.batch_size,
+    #              model=Model, shuffle=args.shuffle,
+    #              balance_frac=args.balance_frac, num_workers=args.num_workers)
+    #nudata = Data(args.data_path, batch_size=args.batch_size,
+    #              model=Model, shuffle=args.shuffle,
+    #              balance_frac=args.balance_frac, num_workers=args.num_workers)
 
     if args.resume:
         model = Model.load_from_checkpoint(args.resume)
@@ -56,7 +59,7 @@ def train(args):
 
     # Configure logger
     if args.logger == "wandb":
-        logdir = pathlib.Path(os.environ["NUGRAPH_LOG"])/args.name
+        logdir = pathlib.Path("/sps/lbno/zappacosta/v10_11/DUNEVD_TRAINING_LOGS/tests")
         logdir.mkdir(parents=True, exist_ok=True)
         log_model = False if args.offline else "all"
         logger = pl.loggers.WandbLogger(

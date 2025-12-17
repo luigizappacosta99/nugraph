@@ -105,7 +105,13 @@ class NuGraphData(HeteroData):
             if node_type == "metadata":
                 continue
             n = data[node_type]
-            if n.num_nodes is not None and not hasattr(n, "x"):
-                n.x = torch.empty([n.num_nodes, 0])
+            try:
+                tmp = n.num_nodes
+            except:
+                print("Error computing num_nodes")
+            else:
+                if tmp is not None and not hasattr(n, "x"):
+                    n.x = torch.empty([tmp, 0])
+                    print(n.x)
 
         return data

@@ -68,6 +68,7 @@ class File:
 
         # open the input HDF5 file in parallel
         self._fd = h5py.File(os.path.expandvars(fname), "r", driver='mpio', comm=MPI.COMM_WORLD)
+        print(f"Loading {fname}...")
 
         # check if data partitioning key datasets exists in the file
         if parKey not in self._fd.keys():
@@ -227,7 +228,8 @@ class File:
 
     def index(self, idx: int):
         """get the index for a given row"""
-        return self._my_index[idx - self._my_start]
+        #return self._my_index[idx - self._my_start]
+        return self._my_index[idx - self._my_start - 1]
 
     def read_seq(self) -> None:
         for group, datasets in self._groups:
@@ -481,7 +483,7 @@ class File:
             displ[recv_rank] = 0
             seq_cnt[recv_rank, 0] = 0
             seq_end = self._starts[recv_rank] + self._counts[recv_rank]
-            seq_id = 0
+            seq_id: np.ulonglong = 0
             for i in range(dim):
                 if all_seq_cnt[i, 0] >= seq_end :
                     seq_cnt[recv_rank, 1] = i - displ[recv_rank]
@@ -489,7 +491,10 @@ class File:
                     seq_end = self._starts[recv_rank] + self._counts[recv_rank]
                     displ[recv_rank] = i
                     seq_cnt[recv_rank, 0] = seq_id
-                seq_id += all_seq_cnt[i, 1]
+                a = all_seq_cnt[i, 1].astype(np.ulonglong)
+                seq_id += a
+                #print(seq_id)
+                del a
 
             # last receiver rank
             seq_cnt[recv_rank, 1] = dim - displ[recv_rank]
@@ -520,9 +525,12 @@ class File:
 
     def read_data(self,
                   start: int,
-                  count: int) -> None:
+                  count: int,
+                  use_seq_cnt: bool = False) -> None:
         # (sequentially) read subarrays of all datasets in all groups that fall
         # in the range of self._seq_name, starting from 'start' and amount of 'count'
+
+        self._use_seq_cnt = use_seq_cnt
 
         for group, datasets in self._groups:
             if self._use_seq_cnt:
@@ -654,6 +662,9 @@ class File:
         # This function collects all data based on self._seq_name, or
         # self._cnt_name into a python list containing Pandas DataFrames, one
         # for a unique event ID.
+
+        
+
         if not self._groups:
             raise Exception('cannot build event without adding any HDF5 groups')
 
@@ -841,9 +852,9 @@ class File:
         rank = comm.Get_rank()
         if rank == 0:
             out.write_metadata(processor.metadata)
-        self.read_data_all()
+        self.read_data(0,65535)
 
-        verbose = False
+        verbose = True
 
         # whether or not to build graphs one event at a time
         build_one_evt_at_a_time = True

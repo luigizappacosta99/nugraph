@@ -1,6 +1,10 @@
 """NuGraph3 instance decoder"""
 from typing import Any
-from sklearn.cluster import DBSCAN
+#from cuml import DBSCAN
+try:
+    from cuml import DBSCAN
+except ImportError:
+    from sklearn.cluster import DBSCAN
 import torch
 from torch import nn
 from torchmetrics.functional.clustering import adjusted_rand_score

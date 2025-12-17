@@ -15,7 +15,7 @@ class PositionFeatures(BaseTransform):
         super().__init__()
         self.planes = planes
 
-    def __call__(self, data: NuGraphData) -> NuGraphData:
+    def forward(self, data: NuGraphData) -> NuGraphData:
         """
         Apply transform to concatenate node position onto node feature tensor
 
@@ -36,3 +36,5 @@ class PositionFeatures(BaseTransform):
             n = data[node_type]
             n.x = torch.cat((n.pos, n.x), dim=-1)
         return data
+    
+

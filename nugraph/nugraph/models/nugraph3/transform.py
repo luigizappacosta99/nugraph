@@ -85,6 +85,7 @@ class Transform(BaseTransform):
 
         # ensure event truth labels have correct format
         evt = data["evt"]
+        #print(evt)
         if not evt.y.ndim:
             evt.y = evt.y.reshape([1])
 

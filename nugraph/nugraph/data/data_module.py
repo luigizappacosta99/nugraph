@@ -12,6 +12,7 @@ from torch_geometric.loader import DataLoader
 from pytorch_lightning import LightningDataModule
 
 from ..data import NuGraphDataset, BalanceSampler
+from ..util import PositionFeatures
 
 DEFAULT_DATA = ("$NUGRAPH_DATA/uboone-opendata/"
                 "uboone-opendata-19be46d89d0f22f5a78641d724c1fedd.gnn.h5")
@@ -22,7 +23,7 @@ class NuGraphDataModule(LightningDataModule):
                  data_path: str = "auto",
                  model: type[torch.nn.Module] = None,
                  batch_size: int = 64,
-                 num_workers: int = 5,
+                 num_workers: int = 0,
                  shuffle: str = 'random',
                  balance_frac: float = 0.1):
         super().__init__()
@@ -131,7 +132,8 @@ class NuGraphDataModule(LightningDataModule):
                 for val in store.values():
                     ret += val.element_size() * val.nelement()
             return ret
-        dsize = [datasize(data) for data in tqdm.tqdm(dataset)]
+        dsize = [datasize(data) for data in tqdm.tqdm(dataset)] 
+        #print(dsize)
         del dataset
         with h5py.File(data_path, "r+") as f:
             f.create_dataset('datasize/train', data=dsize)

@@ -32,6 +32,7 @@ class GraphPlot:
         if isinstance(data, Batch):
             raise RuntimeError('to_dataframe does not support batches!')
 
+        #print(data)
         hit = data["hit"].to_dict()
         df = pd.DataFrame(hit["id"], columns=["id"])
         df["plane"] = [self._planes[i] for i in hit["plane"]]
@@ -76,6 +77,7 @@ class GraphPlot:
 
     def plot(self,
              data: HeteroData,
+             eventID: int = 0,
              target: str = 'hits',
              how: str = 'none',
              filter: str = 'show',
@@ -254,5 +256,7 @@ class GraphPlot:
             margin_l=20, margin_r=20, margin_t=20, margin_b=20,
             title_automargin=title,
         )
+
+        #fig.write_html("/sps/lbno/zappacosta/v10_11/nugraph/pynuml/tests/fig"+str(eventID)+".html") 
 
         return FigureWidget(fig)

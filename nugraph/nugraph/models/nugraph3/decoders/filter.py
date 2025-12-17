@@ -8,6 +8,7 @@ from torch_geometric.data import Batch
 from pytorch_lightning.loggers import Logger
 from ....util import ConfusionMatrixLogger
 from ..types import Data
+from ....util import ConfusionMatrixLogger
 
 class FilterDecoder(nn.Module):
     """
