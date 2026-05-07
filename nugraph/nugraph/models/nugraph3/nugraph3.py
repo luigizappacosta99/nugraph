@@ -13,7 +13,7 @@ from .transform import Transform
 from .encoder import Encoder
 from .core import NuGraphCore
 from .decoders import (SemanticDecoder, FilterDecoder, EventDecoder, VertexDecoder, InstanceDecoder,
-                       SpacepointDecoder)
+                       SpacepointDecoder,EnergyDecoder)
 
 from ...data import H5DataModule
 
@@ -35,17 +35,18 @@ class NuGraph3(LightningModule):
         semantic_head: Whether to enable semantic decoder
         filter_head: Whether to enable filter decoder
         vertex_head: Whether to enable vertex decoder
+        energy_head: Whether to enable energy decoder
         instance_head: Whether to enable instance decoder
         spacepoint_head: Whether to enable spacepoint decoder
         use_checkpointing: Whether to use checkpointing
         lr: Learning rate
     """
     def __init__(self,
-                 in_features: int = 4,
+                 in_features: int = 8,
                  hit_features: int = 128,
                  nexus_features: int = 32,
                  interaction_features: int = 32,
-                 instance_features: int = 8,
+                 instance_features: int = 32,
                  planes: tuple[str] = ("u","v","y"),
                  semantic_classes: tuple[str] = ('pion','muon','kaon','hadron','shower','michel','diffuse'),
                  event_classes: tuple[str] = ('cc_nue','cc_numu','cc_nutau','nc'),
@@ -54,6 +55,7 @@ class NuGraph3(LightningModule):
                  semantic_head: bool = True,
                  filter_head: bool = True,
                  vertex_head: bool = False,
+                 energy_head: bool = False,
                  instance_head: bool = False,
                  spacepoint_head: bool = False,
                  particle_loss: bool = False,
@@ -108,6 +110,10 @@ class NuGraph3(LightningModule):
         if spacepoint_head:
             self.spacepoint_decoder = SpacepointDecoder(hit_features, len(planes))
             self.decoders.append(self.spacepoint_decoder)
+
+        if energy_head:
+            self.energy_decoder = EnergyDecoder(interaction_features)
+            self.decoders.append(self.energy_decoder)
 
         if not self.decoders:
             raise RuntimeError('At least one decoder head must be enabled!')

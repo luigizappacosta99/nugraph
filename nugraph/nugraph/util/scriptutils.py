@@ -58,7 +58,7 @@ def configure_device(device: int = None) -> tuple[str, str | list[int]]:
         return "cpu", "auto"
 
     # if a device was requested but there are none available, raise an error
-    if not torch.cuda.is_available():
+    elif not torch.cuda.is_available():
         raise RuntimeError((f"Device {device} requested but CUDA is not "
                              "available in the current environment."))
 

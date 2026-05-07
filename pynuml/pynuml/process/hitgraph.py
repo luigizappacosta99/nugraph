@@ -47,7 +47,8 @@ class HitGraphProducer(ProcessorBase):
         if self.event_labeller:
             groups['event_table'] = ['is_cc', 'nu_pdg']
         if self.label_vertex:
-            keys = ['nu_vtx_corr','nu_vtx_wire_pos','nu_vtx_wire_time']
+            #keys = ['nu_vtx','nu_vtx_wire_pos','nu_vtx_wire_time']
+            keys = ['nu_vtx','nu_energy'] #MODIFIED
             if 'event_table' in groups:
                 groups['event_table'].extend(keys)
             else:
@@ -145,7 +146,6 @@ class HitGraphProducer(ProcessorBase):
         # get labels for each particle
         if self.semantic_labeller:
             particles = self.semantic_labeller(evt['particle_table'])
-            print(particles)
             try:
                 hits = hits.merge(particles, on='g4_id', how='left')
             except:
@@ -263,8 +263,11 @@ class HitGraphProducer(ProcessorBase):
 
         # 3D vertex truth
         if self.label_vertex:
-            vtx_3d = [ [ event.nu_vtx_corr_x, event.nu_vtx_corr_y, event.nu_vtx_corr_z ] ]
+            #vtx_3d = [ [ event.nu_vtx_corr_x, event.nu_vtx_corr_y, event.nu_vtx_corr_z ] ]
+            vtx_3d = [ [ event.nu_vtx_x, event.nu_vtx_y, event.nu_vtx_z ] ]
+            energy = [ event.nu_energy ]
             data['evt'].y_vtx = torch.tensor(vtx_3d).float()
+            data['evt'].y_en = torch.tensor(energy).float().reshape([1])
 
         #print("end to __call__")
         return evt.name, data

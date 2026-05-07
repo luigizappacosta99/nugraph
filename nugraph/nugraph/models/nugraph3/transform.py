@@ -23,6 +23,10 @@ class Transform(BaseTransform):
            data: NuGraph data object to transform
         """
 
+        # cause there are empty events, duh
+        if data is None:
+            return
+
         # transform old planar format into new hierarchical format
         if "hit" not in data.node_types:
 

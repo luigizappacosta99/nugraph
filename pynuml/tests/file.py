@@ -43,7 +43,7 @@ class Event:
                 ret += f'    {key}\n'
         return ret
 
-class File:
+class MyFile:
     def __init__(self, fname: str, parKey: str = "/event_table/event_id"):
         self._colmap = {
             "event_table": {
@@ -88,6 +88,7 @@ class File:
         # into self._index as a numpy array in data_partition()
         self._index = self._fd.get(parKey)
         self._num_events = self._index.shape[0]
+        print(self._num_events)
 
         # self._groups is a python list, each member is a 2-element list consisting
         # of a group name, and a python list of dataset names
@@ -228,14 +229,14 @@ class File:
 
     def index(self, idx: int):
         """get the index for a given row"""
-        #return self._my_index[idx - self._my_start]
-        return self._my_index[idx - self._my_start - 1]
+        return self._my_index[idx - self._my_start]
 
     def read_seq(self) -> None:
         for group, datasets in self._groups:
             try:
                 # read an HDF5 dataset into a numpy array
                 self._whole_seq[group] = np.array(self._fd[group+"/"+self._seq_name])
+                print(f"Reading {group}/{self._seq_name}")
             except KeyError:
                 print(f"Error: dataset {group}/{self._seq_name} does not exist")
                 sys.stdout.flush()
@@ -250,6 +251,7 @@ class File:
             try:
                 # read an HDF5 dataset into a numpy array
                 self._whole_seq_cnt[group] = np.array(self._fd[group+"/"+self._cnt_name])
+                print(f"Reading {group}/{self._cnt_name}")
             except KeyError:
                 print(f"Error: dataset {group}/{self._cnt_name} does not exist")
                 sys.stdout.flush()
@@ -263,6 +265,8 @@ class File:
         # self._my_start: (== self._starts[rank]) this process's start
         # self._my_count: (== self._counts[rank]) this process's count
         # self._my_index: partitioned dataset i.e. assigned to this process
+
+        print("data_partition")
 
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -483,7 +487,7 @@ class File:
             displ[recv_rank] = 0
             seq_cnt[recv_rank, 0] = 0
             seq_end = self._starts[recv_rank] + self._counts[recv_rank]
-            seq_id: np.ulonglong = 0
+            seq_id = 0
             for i in range(dim):
                 if all_seq_cnt[i, 0] >= seq_end :
                     seq_cnt[recv_rank, 1] = i - displ[recv_rank]
@@ -491,10 +495,7 @@ class File:
                     seq_end = self._starts[recv_rank] + self._counts[recv_rank]
                     displ[recv_rank] = i
                     seq_cnt[recv_rank, 0] = seq_id
-                a = all_seq_cnt[i, 1].astype(np.ulonglong)
-                seq_id += a
-                #print(seq_id)
-                del a
+                seq_id += all_seq_cnt[i, 1]
 
             # last receiver rank
             seq_cnt[recv_rank, 1] = dim - displ[recv_rank]
@@ -525,12 +526,9 @@ class File:
 
     def read_data(self,
                   start: int,
-                  count: int,
-                  use_seq_cnt: bool = False) -> None:
+                  count: int) -> None:
         # (sequentially) read subarrays of all datasets in all groups that fall
         # in the range of self._seq_name, starting from 'start' and amount of 'count'
-
-        self._use_seq_cnt = use_seq_cnt
 
         for group, datasets in self._groups:
             if self._use_seq_cnt:
@@ -662,9 +660,6 @@ class File:
         # This function collects all data based on self._seq_name, or
         # self._cnt_name into a python list containing Pandas DataFrames, one
         # for a unique event ID.
-
-        
-
         if not self._groups:
             raise Exception('cannot build event without adding any HDF5 groups')
 
@@ -852,11 +847,9 @@ class File:
         rank = comm.Get_rank()
         if rank == 0:
             out.write_metadata(processor.metadata)
-        self.read_data(0,65535)
+        self.read_data_all()
 
-        count = 0
-
-        verbose = True
+        verbose = False
 
         # whether or not to build graphs one event at a time
         build_one_evt_at_a_time = True
@@ -874,34 +867,9 @@ class File:
             for idx in range(int(self._my_start), int(self._my_start+self._my_count)):
                 evt = self.build_evt(idx, 1)
                 if len(evt) > 0:
-                    allFilled = [ (len(evt[0]['hit_table']) > 0) , 
-                                 (len(evt[0]['spacepoint_table']) > 0), 
-                                 (len(evt[0]['particle_table']) > 0), 
-                                 (len(evt[0]['edep_table']) > 0), 
-                                 (len(evt[0]['event_table']) > 0) ]
-                    #print(allFilled)
-                    # check that each component is > 0, if not continue
-                    if all(allFilled):
-                        # SAVE ONLY CC
-                        #print(evt[0]['event_table'].is_cc)
-                        if evt[0]['event_table'].is_cc[0]:
-                            #print('ok')
-                            #print(evt[0]['event_table'].is_cc)
-                            name, data = processor(evt[0])
-                            if data is not None: out(name, data)
-                            #if data is not None: print(name)
-                            count = count + 1
-                    #else:
-                        #counts = [ len(evt[0]['hit_table']) , 
-                        #         len(evt[0]['spacepoint_table']), 
-                        #         len(evt[0]['particle_table']), 
-                        #         len(evt[0]['edep_table']), 
-                        #         len(evt[0]['event_table']) ]
-                        #name, data = processor(evt[0])
-                        #print(name, counts)
-                    
+                    name, data = processor(evt[0])
+                    if data is not None: out(name, data)
             if verbose:
                 print("Build 1 event at a time: MPI rank %-3d Memory footprint = %8.1f MiB" %
                     (rank, xproc.memory_info().rss/ 1024.0 ** 2))
-        
-        print("Total events saved: ", count)
+

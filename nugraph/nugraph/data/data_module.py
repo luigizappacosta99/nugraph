@@ -6,6 +6,7 @@ import os
 import sys
 import h5py
 import tqdm
+import math
 
 import torch
 from torch_geometric.loader import DataLoader
@@ -16,6 +17,8 @@ from ..util import PositionFeatures
 
 DEFAULT_DATA = ("$NUGRAPH_DATA/uboone-opendata/"
                 "uboone-opendata-19be46d89d0f22f5a78641d724c1fedd.gnn.h5")
+
+samples_options = {"standard", "train", "test"}
 
 class NuGraphDataModule(LightningDataModule):
     """PyTorch Lightning data module for neutrino graph data."""
@@ -96,11 +99,25 @@ class NuGraphDataModule(LightningDataModule):
         self.test_dataset = NuGraphDataset(self.filename, test_samples, transform)
 
     @staticmethod
-    def generate_samples(data_path: str):
+    def generate_samples(data_path: str, mode: str):
         with h5py.File(data_path) as f:
             samples = list(f['dataset'].keys())
-        split = int(0.05 * len(samples))
-        splits = [ len(samples)-(2*split), split, split ]
+        
+        if mode not in samples_options:
+            raise ValueError(f"Invalid mode '{mode}'. Must be one of: {samples_options}")
+            
+        if(mode=="standard"):
+            split = math.ceil(0.05 * len(samples))
+            splits = [ len(samples)-(2*split), split, split ]
+        elif(mode=="train"):
+            split = math.ceil((1./19) * len(samples))
+            splits = [ len(samples) - split, split, 1 ]
+        elif(mode=="test"):
+            splits = [ 1, 1, len(samples) - 2 ]
+        else:
+            raise ValueError(f"Invalid mode '{mode}'. Must be one of: {samples_options}")
+                
+        # splits = [1, 1, len(samples)-2]
         train, val, test = torch.utils.data.random_split(samples, splits)
 
         with h5py.File(data_path, "r+") as f:

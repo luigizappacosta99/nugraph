@@ -89,6 +89,7 @@ class NuGraphData(HeteroData):
         data = NuGraphData()
         group = dset[()]
         for dataset in group.dtype.names:
+            #print(dataset)
             store, attr = dataset.split('/')
             if "_" in store:
                 store = tuple(store.split("_"))
@@ -107,11 +108,10 @@ class NuGraphData(HeteroData):
             n = data[node_type]
             try:
                 tmp = n.num_nodes
-            except:
-                print("Error computing num_nodes")
-            else:
                 if tmp is not None and not hasattr(n, "x"):
                     n.x = torch.empty([tmp, 0])
-                    print(n.x)
+            except:
+                # cause there are empty events, duh
+                print("Error computing num_nodes")
 
         return data
