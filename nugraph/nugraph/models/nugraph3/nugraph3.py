@@ -42,7 +42,7 @@ class NuGraph3(LightningModule):
         lr: Learning rate
     """
     def __init__(self,
-                 in_features: int = 8,
+                 in_features: int = 6,
                  hit_features: int = 128,
                  nexus_features: int = 32,
                  interaction_features: int = 32,

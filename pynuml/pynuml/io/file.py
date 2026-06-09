@@ -884,13 +884,13 @@ class File:
                     if all(allFilled):
                         # SAVE ONLY CC
                         #print(evt[0]['event_table'].is_cc)
-                        if evt[0]['event_table'].is_cc[0]:
+                        #if evt[0]['event_table'].is_cc[0]:
                             #print('ok')
                             #print(evt[0]['event_table'].is_cc)
-                            name, data = processor(evt[0])
-                            if data is not None: out(name, data)
-                            #if data is not None: print(name)
-                            count = count + 1
+                        name, data = processor(evt[0])
+                        if data is not None: out(name, data)
+                        #if data is not None: print(name)
+                        count = count + 1
                     #else:
                         #counts = [ len(evt[0]['hit_table']) , 
                         #         len(evt[0]['spacepoint_table']), 

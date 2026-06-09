@@ -1,22 +1,12 @@
 """NuGraph multifile data module"""
-from argparse import ArgumentParser
-import warnings
-
 import os
-import sys
-import h5py
-import tqdm
-import math
-
-import torch
-from torch_geometric.loader import DataLoader
-from pytorch_lightning import LightningDataModule
-from torch.utils.data import ConcatDataset, DataLoader
 from pathlib import Path
+
+import h5py
+
 from torch.utils.data import ConcatDataset
 
-from . import NuGraphDataModule
-from . import NuGraphDataset
+from . import NuGraphDataModule, NuGraphDataset
 
 class MultiFileDataModule(NuGraphDataModule):
     """
@@ -97,7 +87,6 @@ class MultiFileDataModule(NuGraphDataModule):
                 test_samples  = f["samples/test"].asstr()[()]
             except KeyError:
                 print(f"[MultiFileDataModule] Sample splits not found in '{filepath}'!  Call 'generate_samples' to create them.")
-                sys.exit(1)
  
         train_datasets.append(NuGraphDataset(filepath, train_samples, transform))
         val_datasets.append(  NuGraphDataset(filepath, val_samples,   transform))
@@ -114,8 +103,7 @@ class MultiFileDataModule(NuGraphDataModule):
             try:
                 extra = list(f["datasize/train"][()])
             except KeyError:
-                print("[MultiFileDataModule] Data size array not found in '{filepath}'!  Call 'generate_samples' to create it.")
-                sys.exit(1)
+                print(f"[MultiFileDataModule] Data size array not found in '{filepath}'!  Call 'generate_samples' to create it.")
  
         return [a + b for a, b in zip(conc, extra)]
     
@@ -125,7 +113,7 @@ class MultiFileDataModule(NuGraphDataModule):
             planes  = f["planes"].asstr()[()].tolist()
             sem_cls = f["semantic_classes"].asstr()[()].tolist()
         except KeyError:
-            print("[MultiFileDataModule] Warning: metadata missing in '{filepath}', skipping consistency check.")
+            print(f"[MultiFileDataModule] Warning: metadata missing in '{filepath}', skipping consistency check.")
             return
  
         if planes != self.planes:
