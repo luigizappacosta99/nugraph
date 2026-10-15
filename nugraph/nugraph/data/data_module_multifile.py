@@ -8,6 +8,8 @@ from torch.utils.data import ConcatDataset
 
 from . import NuGraphDataModule, NuGraphDataset
 
+from .data_module import safe_asstr
+
 class MultiFileDataModule(NuGraphDataModule):
     """
     Basically the same as NuGraphDataModule but handles multiple files at once.
@@ -19,13 +21,15 @@ class MultiFileDataModule(NuGraphDataModule):
     Train/test/validation is considered constant throught all files.
     """
 
-    def __init__(self, directory: str | Path, batch_size: int, model=None):
+    def __init__(self, directory: str | Path, batch_size: int, model=None, num_workers: int = 0):
+
+        self.num_workers = num_workers
 
         #take file list from directory
         directory = Path(directory)
 
         #build file list
-        file_list = sorted(str(f) for f in directory.rglob("*") if f.suffix == ".h5")
+        file_list = sorted(str(f) for f in directory.rglob("*.h5") if f.is_file())
 
         # check if files are present
         if not file_list:
@@ -33,7 +37,7 @@ class MultiFileDataModule(NuGraphDataModule):
         
         print(f"[MultiFileDataModule] Found {len(file_list)} file(s) in '{directory}':")
         
-        super().__init__(data_path=os.path.expandvars(file_list[0]), batch_size=batch_size, model=model)
+        super().__init__(data_path=os.path.expandvars(file_list[0]), batch_size=batch_size, model=model, num_workers=num_workers)
 
         self._file_list = [os.path.expandvars(p) for p in file_list]
  
@@ -78,13 +82,13 @@ class MultiFileDataModule(NuGraphDataModule):
         test_datasets: list,
     ) -> None:
         
-        with h5py.File(filepath) as f:
+        with h5py.File(filepath) as f:  
             self._validate_metadata(f, filepath)
  
             try:
-                train_samples = f["samples/train"].asstr()[()]
-                val_samples   = f["samples/validation"].asstr()[()]
-                test_samples  = f["samples/test"].asstr()[()]
+                test_samples  = safe_asstr(f["samples/test"])
+                train_samples = safe_asstr(f["samples/train"])
+                val_samples   = safe_asstr(f["samples/validation"])
             except KeyError:
                 print(f"[MultiFileDataModule] Sample splits not found in '{filepath}'!  Call 'generate_samples' to create them.")
  

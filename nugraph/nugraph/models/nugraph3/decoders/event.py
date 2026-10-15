@@ -34,12 +34,18 @@ class EventDecoder(nn.Module):
         # metrics
         metric_args = {
             "task": "multiclass",
-            "num_classes": len(event_classes)
+            "num_classes": len(event_classes),
+            "average": "macro"
+        }
+        cm_args = {
+            "task": "multiclass",
+            "num_classes": len(event_classes),
+            "ignore_index": -1,
         }
         self.recall = tm.Recall(**metric_args)
         self.precision = tm.Precision(**metric_args)
         self.f1 = tm.F1Score(**metric_args)
-        self.cm = tm.ConfusionMatrix(**metric_args)
+        self.cm = tm.ConfusionMatrix(**cm_args)
         self.cm_logger = ConfusionMatrixLogger(event_classes)
 
         # network

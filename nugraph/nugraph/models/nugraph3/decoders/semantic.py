@@ -35,12 +35,18 @@ class SemanticDecoder(nn.Module):
         metric_args = {
             "task": "multiclass",
             "num_classes": len(semantic_classes),
-            "ignore_index": -1
+            "ignore_index": -1,
+            "average": "macro"
+        }
+        cm_args = {
+            "task": "multiclass",
+            "num_classes": len(semantic_classes),
+            "ignore_index": -1,
         }
         self.recall = tm.Recall(**metric_args)
         self.precision = tm.Precision(**metric_args)
         self.f1 = tm.F1Score(**metric_args)
-        self.cm = tm.ConfusionMatrix(**metric_args)
+        self.cm = tm.ConfusionMatrix(**cm_args)
         self.cm_logger = ConfusionMatrixLogger(semantic_classes)
 
         # network

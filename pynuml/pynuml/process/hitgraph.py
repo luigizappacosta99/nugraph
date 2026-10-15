@@ -78,7 +78,7 @@ class HitGraphProducer(ProcessorBase):
             plane_key, proj_key, drift_key = "local_plane", "local_wire", "local_time"
             #print("local_plane: true")
         else:
-            plane_key, proj_key, drift_key = "view", "proj", "drift"
+            plane_key, proj_key, drift_key = "plane", "proj", "drift"
             #print("local_plane: false")
 
         spacepoints = evt['spacepoint_table'].reset_index(drop=True)
@@ -188,7 +188,7 @@ class HitGraphProducer(ProcessorBase):
         data["hit"].pos = torch.tensor(hits[node_pos].values, dtype=torch.float)
 
         # node features
-        node_feats = self.node_feats + [plane_key, proj_key, drift_key]
+        node_feats = ['integral','rms','tpc', plane_key]
         data["hit"].x = torch.tensor(hits[node_feats].values).float()
         #print("nodes")
 
@@ -269,5 +269,4 @@ class HitGraphProducer(ProcessorBase):
             data['evt'].y_vtx = torch.tensor(vtx_3d).float()
             data['evt'].y_en = torch.tensor(energy).float().reshape([1])
 
-        #print("end to __call__")
         return evt.name, data

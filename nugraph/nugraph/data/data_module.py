@@ -20,6 +20,25 @@ DEFAULT_DATA = ("$NUGRAPH_DATA/uboone-opendata/"
 
 samples_options = {"standard", "train", "test"}
 
+def safe_asstr(dataset):
+    """Return string sample names from an HDF5 dataset.
+    Falls back to an empty list if the dataset is empty or
+    doesn't have a proper HDF5 string dtype."""
+    if dataset.shape[0] == 0:
+        warnings.warn(f"Dataset '{dataset.name}' is empty — treating as no samples.")
+        return []
+    try:
+        return dataset.asstr()[()]
+    except TypeError:
+        raw = dataset[()]
+        try:
+            decoded = [x.decode() if isinstance(x, bytes) else str(x) for x in raw]
+            warnings.warn(f"Dataset '{dataset.name}' is not a string dtype — decoded manually.")
+            return decoded
+        except Exception:
+            warnings.warn(f"Dataset '{dataset.name}' could not be decoded — treating as no samples.")
+            return []
+
 class NuGraphDataModule(LightningDataModule):
     """PyTorch Lightning data module for neutrino graph data."""
     def __init__(self,
@@ -74,15 +93,19 @@ class NuGraphDataModule(LightningDataModule):
                 self.event_classes = None
 
             # load sample splits
-            try:
-                # pylint: disable=no-member
-                train_samples = f['samples/train'].asstr()[()]
-                val_samples = f['samples/validation'].asstr()[()]
-                test_samples = f['samples/test'].asstr()[()]
-            except KeyError:
-                print(("Sample splits not found in file! "
-                       "Call \"generate_samples\" to create them."))
-                sys.exit()
+            splits = {}
+            for split, key in (('train', 'samples/train'),
+                                ('validation', 'samples/validation'),
+                                ('test', 'samples/test')):
+                if key not in f:
+                    print(("Sample splits not found in file! "
+                           "Call \"generate_samples\" to create them."))
+                    sys.exit()
+                splits[split] = safe_asstr(f[key])
+
+            train_samples = splits['train']
+            val_samples = splits['validation']
+            test_samples = splits['test']
 
             # load data sizes
             try:
@@ -111,9 +134,9 @@ class NuGraphDataModule(LightningDataModule):
             splits = [ len(samples)-(2*split), split, split ]
         elif(mode=="train"):
             split = math.ceil((1./19) * len(samples))
-            splits = [ len(samples) - split, split, 1 ]
+            splits = [ len(samples) - split, split, 0 ]
         elif(mode=="test"):
-            splits = [ 1, 1, len(samples) - 2 ]
+            splits = [ 0, 0, len(samples) ]
         else:
             raise ValueError(f"Invalid mode '{mode}'. Must be one of: {samples_options}")
                 

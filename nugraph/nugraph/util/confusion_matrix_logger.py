@@ -99,7 +99,7 @@ class ConfusionMatrixLogger:
         table = wandb.Table(columns=["plotly_figure"])
         fig = px.imshow(
             matrix, zmax=1, text_auto=True,
-            labels={"x": "Predicted", "y": "True", "color": label},
+            labels={"x": "Predicted", "y": "True", "color": "label"},
             x=self.classes, y=self.classes)
         with tempfile.NamedTemporaryFile() as f:
             fig.write_html(f.name, auto_play=False)

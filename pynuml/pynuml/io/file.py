@@ -49,7 +49,7 @@ class File:
             "event_table": {
                 "nu_dir": [ "nu_dir_x", "nu_dir_y", "nu_dir_z" ],
                 "nu_vtx": [ "nu_vtx_x", "nu_vtx_y", "nu_vtx_z" ],
-                "nu_vtx_corr": [ "nu_vtx_corr_x", "nu_vtx_corr_y", "nu_vtx_corr_z" ],
+                #"nu_vtx_corr": [ "nu_vtx_corr_x", "nu_vtx_corr_y", "nu_vtx_corr_z" ],
             },
             "particle_table": {
                 "start_position": [ "start_position_x", "start_position_y", "start_position_z" ],
@@ -228,8 +228,8 @@ class File:
 
     def index(self, idx: int):
         """get the index for a given row"""
-        #return self._my_index[idx - self._my_start]
-        return self._my_index[idx - self._my_start - 1]
+        return self._my_index[idx - self._my_start]
+        #return self._my_index[idx - self._my_start - 1]
 
     def read_seq(self) -> None:
         for group, datasets in self._groups:
@@ -879,26 +879,11 @@ class File:
                                  (len(evt[0]['particle_table']) > 0), 
                                  (len(evt[0]['edep_table']) > 0), 
                                  (len(evt[0]['event_table']) > 0) ]
-                    #print(allFilled)
                     # check that each component is > 0, if not continue
                     if all(allFilled):
-                        # SAVE ONLY CC
-                        #print(evt[0]['event_table'].is_cc)
-                        #if evt[0]['event_table'].is_cc[0]:
-                            #print('ok')
-                            #print(evt[0]['event_table'].is_cc)
                         name, data = processor(evt[0])
                         if data is not None: out(name, data)
-                        #if data is not None: print(name)
                         count = count + 1
-                    #else:
-                        #counts = [ len(evt[0]['hit_table']) , 
-                        #         len(evt[0]['spacepoint_table']), 
-                        #         len(evt[0]['particle_table']), 
-                        #         len(evt[0]['edep_table']), 
-                        #         len(evt[0]['event_table']) ]
-                        #name, data = processor(evt[0])
-                        #print(name, counts)
                     
             if verbose:
                 print("Build 1 event at a time: MPI rank %-3d Memory footprint = %8.1f MiB" %
